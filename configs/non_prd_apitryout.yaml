@@ -1,0 +1,34 @@
+# Auto-generated config file
+# Schema source: schema\schema.py
+# Generated: 2025-05-29T00:56:17.012416+00:00
+
+suite_name: Auto Uploader - 2025.05.28
+suite_parent_id: 21735994
+suite_parent_type: test-cycle
+
+excel_path: input\AUTO_result_uploads\upload_template.xlsx
+excel_tab_name: Sheet1
+excel_column_mapping:
+  Test Case PID: test_case_pid
+  Test Run Name: test_run_name
+  NFS PDF Path: pdf_file_path
+  Test Result: raw_test_result
+
+qtest_domain: https://apitryout.qtestnet.com/
+qtest_project_id: 118513
+qtest_auth_path: auth\qTest\apitryout.yaml
+
+output_dir: output\AUTO_result_uploads
+
+log_dir: logs\AUTO_result_uploads
+log_level: INFO
+log_microseconds: false
+
+request_timeout: 10
+request_retries: 3
+request_page_size: 200
+case_search_chunk_size: 50
+
+execution_status_mapping:
+  "Passed": 601
+  "Failed": 602
