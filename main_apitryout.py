@@ -14,7 +14,7 @@ from modules.qtest_extract import search_qTest_for_test_cases, create_test_suite
 
 
 def load_config():
-    config_path = r"configs\non_prd_apitryout.yaml"
+    config_path = r"configs\apitryout.yaml"
 
     loader = ConfigLoader(config_path)
     CONFIG = loader.config
@@ -296,10 +296,14 @@ def get_latest_approved_versions(CONFIG, test_case_df):
     logger = CONFIG["logger"]
     updated_rows = []
 
+    # Check if test_case_df is empty and raise an error if it is
+    if test_case_df.empty:
+        raise ValueError("The test_case_df is empty. Cannot proceed with updates.")
+
     # Extract all rows where version does NOT end in .0
     needs_update = test_case_df[~test_case_df["version"].astype(str).str.endswith(".0")]
 
-    logger.info(f"Found {len(needs_update)} test cases that do not end with .0 — checking for latest approved versions.")
+    logger.info(f"Found {len(needs_update)} test cases that do not end with .0 - checking for latest approved versions.")
 
     for _, row in needs_update.iterrows():
         case_id = row["id"]
@@ -319,7 +323,7 @@ def get_latest_approved_versions(CONFIG, test_case_df):
         approved_versions.sort(key=lambda v: parse_version(v["version"]), reverse=True)
         latest = approved_versions[0]
 
-        logger.info(f"Replacing case ID {case_id} (v{row['version']}) with v{latest['version']} (ID: {latest['id']})")
+        logger.info(f"Replacing case ID {case_id} (v{row['version']}) with v{latest['version']}")
 
         new_row = row.copy()
         new_row["id"] = latest["id"]
@@ -343,7 +347,6 @@ def get_latest_approved_versions(CONFIG, test_case_df):
 
     else:
         return test_case_df, pd.DataFrame(columns=test_case_df.columns)
-
 
 
 
@@ -379,7 +382,12 @@ def write_upload_results_to_excel(df, CONFIG):
 
 if __name__ == "__main__":
     CONFIG = load_config()
+
+    import pdb; pdb.set_trace()
+
+
     auto_result_df = load_data_from_excel(CONFIG)
+    
 
     test_case_pids = list(
         auto_result_df.loc[auto_result_df["Upload Status"].str.strip() == "", "test_case_pid"]
@@ -388,6 +396,7 @@ if __name__ == "__main__":
     )
 
     test_case_df = search_qTest_for_test_cases(CONFIG, test_case_pids)
+    print(test_case_df)
     test_case_df, updated_cases_df = get_latest_approved_versions(CONFIG, test_case_df)
     test_case_step_df = unpack_case_steps(CONFIG, test_case_df)
     test_case_step_df = update_case_steps(CONFIG, updated_cases_df, test_case_step_df)

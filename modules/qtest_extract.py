@@ -183,7 +183,7 @@ def create_test_suite(CONFIG):
 
     logger.info(f"Creating test suite: '{suite_name}' under parent ID {parent_id} ({parent_type})")
 
-    response = requests.post(url, headers=headers, json=request_body)
+    response = requests.post(url, headers=headers, json=request_body, verify=False)
 
     if response.status_code == 200:
         suite_data = response.json()
@@ -232,7 +232,7 @@ def create_test_runs(CONFIG, suite_id, valid_case_df):
         }
 
         try:
-            response = requests.post(url, headers=headers, json=request_body)
+            response = requests.post(url, headers=headers, json=request_body, verify=False)
 
             if response.status_code == 201:
                 run_data = response.json()
@@ -264,7 +264,7 @@ def get_case_versions(CONFIG, case_id):
     }
 
     logger.info(f"Querying versions for test case ID: {case_id}")
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, verify=False)
 
     if response.status_code == 200:
         return response.json()  # Should be a list of version objects
@@ -291,7 +291,7 @@ def get_steps_by_case_version(CONFIG, case_id, version_id):
     logger.info(f"Querying steps for case ID {case_id}, version ID {version_id}")
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, verify=False)
         response.raise_for_status()
         steps = response.json()
 
@@ -357,7 +357,7 @@ def execute_test_runs(CONFIG, valid_case_df, test_runs, test_case_step_df):
                         "id": result_code,
                         "name": test_result
                     },
-                    "actual_result": f"Automated testing has {test_result}."
+                    "actual_result": f"Automated test script has passed, and the location of the test result is included below:\n\n{record["pdf_file_path"]}"
                 }
             ]
         }
@@ -370,7 +370,7 @@ def execute_test_runs(CONFIG, valid_case_df, test_runs, test_case_step_df):
 
         try:
             logger.info(f"Posting result for PID {pid} to test run {test_run_id}")
-            response = requests.post(url, headers=headers, json=body)
+            response = requests.post(url, headers=headers, json=body, verify=False)
 
             if response.status_code == 201:
                 logger.info(f"Successfully posted result for PID {pid}")
