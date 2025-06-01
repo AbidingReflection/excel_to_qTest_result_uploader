@@ -3,7 +3,9 @@ from datetime import datetime
 import pandas as pd
 
 def write_upload_results_to_excel(CONFIG, auto_result_df, test_case_df, test_case_step_df, test_runs):
-    # Validate necessary CONFIG keys
+    """Write test results, cases, steps, and runs to a timestamped Excel file."""
+
+    # Ensure required configuration keys are present
     required_keys = ['suite_name', 'output_dir']
     missing = [key for key in required_keys if key not in CONFIG]
     if missing:
@@ -11,17 +13,18 @@ def write_upload_results_to_excel(CONFIG, auto_result_df, test_case_df, test_cas
 
     suite_name = CONFIG['suite_name']
     output_dir = Path(CONFIG['output_dir'])
+    logger = CONFIG.get("logger")
 
-    # Ensure output directory exists
+    # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Format file name
+    # Generate sanitized filename with timestamp
     timestamp_str = datetime.now().strftime('%Y_%m_%d_%H%M%S')
     safe_suite_name = "".join(c for c in suite_name if c.isalnum() or c in " _-").rstrip()
-    base_filename = f"{safe_suite_name} - Upload Results - {timestamp_str}.xlsx"
-    output_path = output_dir / base_filename
+    filename = f"{safe_suite_name} - Upload Results - {timestamp_str}.xlsx"
+    output_path = output_dir / filename
 
-    # Write to Excel with specified sheet name
+    # Write DataFrames to Excel
     try:
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
             auto_result_df.to_excel(writer, sheet_name="Targets", index=False)
@@ -31,6 +34,5 @@ def write_upload_results_to_excel(CONFIG, auto_result_df, test_case_df, test_cas
     except Exception as e:
         raise IOError(f"Failed to write Excel file: {e}")
 
-    CONFIG['logger'].info(f"Wrote upload results to: '{output_path}'")
+    logger.info(f"Wrote upload results to: '{output_path}'")
     return str(output_path)
-

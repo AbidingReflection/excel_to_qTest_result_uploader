@@ -3,12 +3,16 @@ from pathlib import Path
 import pandas as pd
 
 def load_data_from_excel(CONFIG):
+    """Load and validate data from an Excel file based on CONFIG settings."""
+
     def _validate_required_config_keys(CONFIG, required_keys):
+        """Ensure all required keys exist in the config."""
         missing = [k for k in required_keys if k not in CONFIG]
         if missing:
             raise KeyError(f"Missing required config keys: {missing}")
 
     def _load_and_prepare_excel(CONFIG):
+        """Load Excel sheet and apply column renaming based on mapping."""
         excel_path = Path(CONFIG["excel_path"])
         sheet_name = CONFIG["excel_tab_name"]
         column_map = CONFIG["excel_column_mapping"]
@@ -32,26 +36,30 @@ def load_data_from_excel(CONFIG):
         return df_raw.rename(columns=column_map)
 
     def _add_upload_status_column(df):
+        """Insert an empty 'Upload Status' column at the front of the DataFrame."""
         df["Upload Status"] = ""
         reordered_cols = ["Upload Status"] + [col for col in df.columns if col != "Upload Status"]
         return df[reordered_cols]
 
-
+    def _append_status(df, idx, msg):
+        """Append a status message to the Upload Status column."""
+        current = str(df.at[idx, "Upload Status"]).strip()
+        df.at[idx, "Upload Status"] = f"{current}\n{msg}" if current else msg
 
     def _validate_each_row(df):
+        """Run all row-level validation and annotation checks."""
         pid_pattern = re.compile(r"^TC-[1-9][0-9]{0,9}$")
-
         for idx, row in df.iterrows():
             _check_pdf_path(row, df, idx)
             _check_test_case_pid(row, df, idx, pid_pattern)
             _parse_test_result(row, df, idx)
             _check_unapproved_version(row, df, idx)
 
-
     def _check_pdf_path(row, df, idx):
+        """Validate the PDF file path exists; annotate upload status if missing or bad."""
         raw_path = row.get("pdf_file_path")
         if not raw_path:
-            df.at[idx, "Upload Status"] = "Missing PDF path"
+            _append_status(df, idx, "Missing PDF path")
             return
 
         clean_path_str = re.sub(r'^[\'"]|[\'"]$', '', raw_path.strip().replace('\xa0', ''))
@@ -59,16 +67,17 @@ def load_data_from_excel(CONFIG):
         if not path.exists():
             alt_path = Path(clean_path_str.replace("/", "\\"))
             if not alt_path.exists():
-                df.at[idx, "Upload Status"] = f"PDF not found: {raw_path}"
+                _append_status(df, idx, f"PDF not found: {raw_path}")
 
     def _check_test_case_pid(row, df, idx, pid_pattern):
+        """Validate test case PID format."""
         pid = row.get("test_case_pid", "").strip()
         if not pid_pattern.match(pid):
-            df.at[idx, "Upload Status"] = f"Invalid PID format: {pid}"
+            _append_status(df, idx, f"Invalid PID format: {pid}")
 
     def _parse_test_result(row, df, idx):
+        """Derive and annotate test result based on raw result string."""
         raw = str(row.get("raw_test_result", "")).strip().lower()
-
         has_passed = "passed" in raw
         has_failed = "failed" in raw
 
@@ -78,30 +87,21 @@ def load_data_from_excel(CONFIG):
             result = "Passed"
         else:
             result = "N/A"
-            if df.at[idx, "Upload Status"]:
-                df.at[idx, "Upload Status"] += "\nResult could not be determined from raw_test_result"
-            else:
-                df.at[idx, "Upload Status"] = "Result could not be determined from raw_test_result"
-
+            _append_status(df, idx, "Result could not be determined from raw_test_result")
 
         df.at[idx, "test_result"] = result
 
     def _check_unapproved_version(row, df, idx):
+        """Check if version is a pre-release (e.g., 0.x) and annotate."""
         version = str(row.get("version", ""))
         if version.startswith("0."):
-            current_status = str(df.at[idx, "Upload Status"]).strip()
-            new_status = "Unapproved version (starts with 0)"
-            if current_status:
-                df.at[idx, "Upload Status"] = f"{current_status}\n{new_status}"
-            else:
-                df.at[idx, "Upload Status"] = new_status
+            _append_status(df, idx, "Unapproved version (starts with 0)")
 
     logger = CONFIG.get("logger")
-    _validate_required_config_keys(CONFIG, ["excel_path", "excel_tab_name", "excel_column_mapping"])
 
+    _validate_required_config_keys(CONFIG, ["excel_path", "excel_tab_name", "excel_column_mapping"])
     df = _load_and_prepare_excel(CONFIG)
     df = _add_upload_status_column(df)
-
     _validate_each_row(df)
 
     logger.info(f"Loaded {len(df)} records from '{CONFIG['excel_path']}'")

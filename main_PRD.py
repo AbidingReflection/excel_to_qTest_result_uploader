@@ -38,7 +38,7 @@ def run_pipeline(CONFIG):
 
 if __name__ == "__main__":
     try:
-        CONFIG = load_config(Path("configs") / "apitryout.yaml")
+        CONFIG = load_config(Path("configs") / "PRD.yaml")
         run_pipeline(CONFIG)
 
     except Exception as e:
@@ -50,6 +50,6 @@ if __name__ == "__main__":
             pass
 
         if logger:
-            logger.exception("Fatal error during apitryout pipeline")
+            logger.exception("Fatal error during PRD pipeline")
         else:
-            print(f"Fatal error during apitryout pipeline: {e}")
+            print(f"Fatal error during PRD pipeline: {e}")

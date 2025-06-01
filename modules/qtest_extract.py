@@ -9,12 +9,12 @@ import time
 import pandas as pd
 
 class RequestFailureException(Exception):
-    """Custom exception for request failures after all retries."""
+    """Raised when all retry attempts for a request fail."""
     pass
 
 
 async def make_search_requests(CONFIG, project_id: int, query_object_type: str, query: str, return_fields: list[str] = None):
-    """Executes paginated search requests with retries and concurrency, returning results as a DataFrame."""
+    """Perform concurrent, paginated qTest search requests with retries and return results as a DataFrame."""
 
     if return_fields is None:
         return_fields = ["*"]  # Default to all fields
@@ -44,6 +44,8 @@ async def make_search_requests(CONFIG, project_id: int, query_object_type: str, 
     max_retries = CONFIG.get("request_retries", 3)
 
     async def fetch_with_retries(url, headers, json_data, params):
+        """Perform a POST request with retry logic for transient server errors."""
+
         for attempt in range(1, max_retries + 1):
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, json=json_data, params=params) as response:
@@ -114,6 +116,8 @@ async def make_search_requests(CONFIG, project_id: int, query_object_type: str, 
 
 
 async def extract_test_cases(CONFIG, test_case_pids):
+    """Chunk and asynchronously fetch test case details from qTest using search API."""
+
     if not isinstance(test_case_pids, list) or not all(isinstance(pid, str) for pid in test_case_pids):
         raise ValueError("test_case_pids must be a list of strings.")
 
@@ -156,7 +160,7 @@ async def extract_test_cases(CONFIG, test_case_pids):
 
 
 def search_qTest_for_test_cases(CONFIG, test_case_pids):
-    """Synchronous wrapper to fetch test cases."""
+    """Sync wrapper for `extract_test_cases` to return test cases as DataFrame."""
     if not test_case_pids:
         CONFIG["logger"].info("No test case PIDs provided.")
         return pd.DataFrame()
@@ -165,6 +169,7 @@ def search_qTest_for_test_cases(CONFIG, test_case_pids):
 
 
 def create_test_suite(CONFIG):
+    """Create a test suite in qTest under the specified parent."""
     project_id = CONFIG.get("qtest_project_id")
     parent_id = CONFIG.get("suite_parent_id")
     parent_type = CONFIG.get("suite_parent_type", "test-cycle")
@@ -213,6 +218,8 @@ def create_test_suite(CONFIG):
 
 
 def create_test_runs(CONFIG, suite_id, valid_case_df):
+    """Create test runs in qTest for each test case in the DataFrame."""
+
     project_id = CONFIG.get("qtest_project_id")
     parent_id = suite_id
     parent_type = "test-suite"
@@ -267,6 +274,8 @@ def create_test_runs(CONFIG, suite_id, valid_case_df):
 
 
 def get_case_versions(CONFIG, case_id):
+    """Get all versions of a test case from qTest, retrying on failure."""
+
     project_id = CONFIG["qtest_project_id"]
     logger = CONFIG["logger"]
 
@@ -299,6 +308,8 @@ def get_case_versions(CONFIG, case_id):
 
 
 def get_steps_by_case_version(CONFIG, case_id, version_id):
+    """Retrieve test steps for a specific test case version."""
+
     project_id = CONFIG["qtest_project_id"]
     logger = CONFIG["logger"]
 
@@ -339,6 +350,8 @@ def get_steps_by_case_version(CONFIG, case_id, version_id):
 
 
 def execute_test_runs(CONFIG, valid_case_df, test_runs, test_case_step_df):
+    """Log execution results for each test case run with step-level logs."""
+
     logger = CONFIG.get("logger")
     project_id = CONFIG["qtest_project_id"]
     result_code_mapping = CONFIG.get("execution_status_mapping", {})
@@ -420,6 +433,8 @@ def execute_test_runs(CONFIG, valid_case_df, test_runs, test_case_step_df):
 
 
 def get_latest_approved_versions(CONFIG, test_case_df):
+    """Replace version in test_case_df with latest approved (.0) version, if available."""
+
     logger = CONFIG["logger"]
     updated_rows = []
 

@@ -1,4 +1,3 @@
-import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -108,7 +107,7 @@ if __name__ == "__main__":
     output_dir.mkdir(exist_ok=True)
 
     exclude_config = {
-        "prefixes": ["file_tree_"],
+        "prefixes": ["file_tree_", ".~lock"],
         "suffixes": [],
         "filetypes": [],
         "folders": ['.git', 'venv', "__pycache__", "logs", ".pytest_cache", "output"]
