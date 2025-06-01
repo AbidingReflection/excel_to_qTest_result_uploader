@@ -111,7 +111,7 @@ if __name__ == "__main__":
         "prefixes": ["file_tree_"],
         "suffixes": [],
         "filetypes": [],
-        "folders": ['.git', 'venv', "__pycache__",  ".pytest_cache", "output"]
+        "folders": ['.git', 'venv', "__pycache__", "logs", ".pytest_cache", "output"]
     }
 
     generate_file_tree(target_path, output_dir / 'file_tree', exclude_config, archive_previous=True)

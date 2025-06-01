@@ -1,10 +1,12 @@
 import aiohttp
 import asyncio
-import json
-import pandas as pd
-import requests
 from datetime import datetime, timezone
+import json
+import requests
+import re
+import time
 
+import pandas as pd
 
 class RequestFailureException(Exception):
     """Custom exception for request failures after all retries."""
@@ -165,7 +167,7 @@ def search_qTest_for_test_cases(CONFIG, test_case_pids):
 def create_test_suite(CONFIG):
     project_id = CONFIG.get("qtest_project_id")
     parent_id = CONFIG.get("suite_parent_id")
-    parent_type = CONFIG.get("suite_parent_type", "test-cycle")  # fallback to "test-cycle"
+    parent_type = CONFIG.get("suite_parent_type", "test-cycle")
     suite_name = CONFIG.get("suite_name")
 
     logger = CONFIG["logger"]
@@ -177,26 +179,38 @@ def create_test_suite(CONFIG):
         "Content-Type": "application/json"
     }
 
-    request_body = {
-        "name": suite_name
-    }
+    request_body = {"name": suite_name}
+    max_retries = CONFIG.get("request_retries", 3)
+    delay_seconds = 1
 
-    logger.info(f"Creating test suite: '{suite_name}' under parent ID {parent_id} ({parent_type})")
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"[Attempt {attempt}/{max_retries}] Creating test suite: '{suite_name}' under parent ID {parent_id} ({parent_type})")
+            response = requests.post(url, headers=headers, json=request_body, verify=False)
 
-    response = requests.post(url, headers=headers, json=request_body)
+            if response.status_code == 200:
+                suite_data = response.json()
+                suite_id = suite_data.get("id")
+                if suite_id:
+                    logger.info(f"Successfully created test suite '{suite_name}' with ID: {suite_id}")
+                    return suite_id
+                else:
+                    logger.warning(f"Attempt {attempt} succeeded but response did not contain suite ID: {suite_data}")
+            else:
+                logger.warning(f"Attempt {attempt} failed: {response.status_code} - {response.text}")
 
-    if response.status_code == 200:
-        suite_data = response.json()
-        suite_id = suite_data.get("id")
-        logger.info(f"Created test suite '{suite_name}' with ID: {suite_id}")
-        return suite_id
-    else:
-        logger.error(f"Failed to create test suite. Status {response.status_code}: {response.text}")
-        raise Exception(f"Create suite failed ({response.status_code}) — {response.text}")
+        except requests.RequestException as e:
+            logger.warning(f"Attempt {attempt} exception during suite creation: {e}")
 
+        if attempt < max_retries:
+            time.sleep(delay_seconds)
+            delay_seconds *= 2
+        else:
+            logger.error(f"Final failure creating suite '{suite_name}' after {max_retries} attempts.")
+            logger.error(f"Last response: {getattr(response, 'text', 'No response')}")
 
-import requests
-import pandas as pd
+    raise Exception(f"Failed to create suite '{suite_name}' after {max_retries} attempts.")
+
 
 def create_test_runs(CONFIG, suite_id, valid_case_df):
     project_id = CONFIG.get("qtest_project_id")
@@ -232,7 +246,7 @@ def create_test_runs(CONFIG, suite_id, valid_case_df):
         }
 
         try:
-            response = requests.post(url, headers=headers, json=request_body)
+            response = requests.post(url, headers=headers, json=request_body, verify=False)
 
             if response.status_code == 201:
                 run_data = response.json()
@@ -255,23 +269,33 @@ def create_test_runs(CONFIG, suite_id, valid_case_df):
 def get_case_versions(CONFIG, case_id):
     project_id = CONFIG["qtest_project_id"]
     logger = CONFIG["logger"]
-    
+
     url = f"{CONFIG['qtest_domain']}api/v3/projects/{project_id}/test-cases/{case_id}/versions?showParamIdentifier=false"
-    
+
     headers = {
         "Authorization": CONFIG['auth']['qtest']['qTest_bearer_token'].get(),
         "Content-Type": "application/json"
     }
 
-    logger.info(f"Querying versions for test case ID: {case_id}")
-    response = requests.get(url, headers=headers)
+    max_retries = CONFIG.get("request_retries", 3)
 
-    if response.status_code == 200:
-        return response.json()  # Should be a list of version objects
-    else:
-        logger.error(f"Failed to fetch versions for test case {case_id}: {response.status_code} - {response.text}")
-        return []
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"[Attempt {attempt}/{max_retries}] Querying versions for test case ID: {case_id}")
+            response = requests.get(url, headers=headers, verify=False)
 
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.warning(f"Attempt {attempt} failed for case ID {case_id}: {response.status_code} - {response.text}")
+                if attempt == max_retries:
+                    logger.error(f"Final failure fetching versions for case ID {case_id} after {max_retries} attempts.")
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Attempt {attempt} exception for case ID {case_id}: {e}")
+            if attempt == max_retries:
+                logger.exception(f"Final exception fetching versions for case ID {case_id} after {max_retries} attempts.")
+
+    return []  # Fallback if all retries fail
 
 
 def get_steps_by_case_version(CONFIG, case_id, version_id):
@@ -288,22 +312,30 @@ def get_steps_by_case_version(CONFIG, case_id, version_id):
         "Content-Type": "application/json"
     }
 
-    logger.info(f"Querying steps for case ID {case_id}, version ID {version_id}")
+    max_retries = CONFIG.get("request_retries", 3)
 
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        steps = response.json()
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"[Attempt {attempt}/{max_retries}] Querying steps for case ID {case_id}, version ID {version_id}")
+            response = requests.get(url, headers=headers, verify=False)
 
-        if not isinstance(steps, list):
-            logger.warning(f"Unexpected format for steps response (case ID: {case_id}, version ID: {version_id}): {steps}")
-            return []
+            if response.status_code == 200:
+                steps = response.json()
+                if not isinstance(steps, list):
+                    logger.warning(f"Unexpected format for steps response (case ID: {case_id}, version ID: {version_id}): {steps}")
+                    return []
+                return steps
+            else:
+                logger.warning(f"Attempt {attempt} failed for steps (case ID {case_id}, version ID {version_id}): {response.status_code} - {response.text}")
+                if attempt == max_retries:
+                    logger.error(f"Final failure fetching steps for case ID {case_id}, version ID {version_id} after {max_retries} attempts.")
 
-        return steps
+        except requests.RequestException as e:
+            logger.warning(f"Attempt {attempt} exception for steps (case ID {case_id}, version ID {version_id}): {e}")
+            if attempt == max_retries:
+                logger.exception(f"Final exception fetching steps for case ID {case_id}, version ID {version_id} after {max_retries} attempts.")
 
-    except requests.RequestException as e:
-        logger.error(f"Failed to retrieve steps for case ID {case_id}, version ID {version_id}: {e}")
-        return []
+    return []  # Fallback if all retries fail
 
 
 def execute_test_runs(CONFIG, valid_case_df, test_runs, test_case_step_df):
@@ -357,7 +389,7 @@ def execute_test_runs(CONFIG, valid_case_df, test_runs, test_case_step_df):
                         "id": result_code,
                         "name": test_result
                     },
-                    "actual_result": f"Automated testing has {test_result}."
+                    "actual_result": f"Automated test script has passed, and the location of the test result is included below:\n\n{record["pdf_file_path"]}"
                 }
             ]
         }
@@ -368,14 +400,77 @@ def execute_test_runs(CONFIG, valid_case_df, test_runs, test_case_step_df):
             "Content-Type": "application/json"
         }
 
-        try:
-            logger.info(f"Posting result for PID {pid} to test run {test_run_id}")
-            response = requests.post(url, headers=headers, json=body)
+        max_retries = CONFIG.get("request_retries", 3)
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(f"[Attempt {attempt}/{max_retries}] Posting result for PID {pid} to test run {test_run_id}")
+                response = requests.post(url, headers=headers, json=body, verify=False)
 
-            if response.status_code == 201:
-                logger.info(f"Successfully posted result for PID {pid}")
-            else:
-                logger.error(f"Failed to post result for PID {pid}: {response.status_code} - {response.text}")
+                if response.status_code == 201:
+                    logger.info(f"Successfully posted result for PID {pid}")
+                    break  # Exit retry loop on success
+                else:
+                    logger.warning(f"Attempt {attempt} failed for PID {pid}: {response.status_code} - {response.text}")
+                    if attempt == max_retries:
+                        logger.error(f"Final failure posting result for PID {pid} after {max_retries} attempts.")
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"Attempt {attempt} exception for PID {pid}: {e}")
+                if attempt == max_retries:
+                    logger.exception(f"Final exception posting result for PID {pid} after {max_retries} attempts.")
 
-        except Exception as e:
-            logger.exception(f"Exception while posting result for PID {pid}: {e}")
+
+def get_latest_approved_versions(CONFIG, test_case_df):
+    logger = CONFIG["logger"]
+    updated_rows = []
+
+    # Check if test_case_df is empty and raise an error if it is
+    if test_case_df.empty:
+        raise ValueError("The test_case_df is empty. Cannot proceed with updates.")
+
+    # Extract all rows where version does NOT end in .0
+    needs_update = test_case_df[~test_case_df["version"].astype(str).str.endswith(".0")]
+
+    logger.info(f"Found {len(needs_update)} test cases that do not end with .0 - checking for latest approved versions.")
+
+    for _, row in needs_update.iterrows():
+        case_id = row["id"]
+        pid = row["pid"]
+
+        versions = get_case_versions(CONFIG, case_id)
+        approved_versions = [v for v in versions if str(v.get("version", "")).endswith(".0")]
+
+        if not approved_versions:
+            logger.warning(f"No approved (.0) versions found for test case ID {case_id} (PID: {pid})")
+            continue
+
+        def parse_version(vstr):
+            match = re.match(r"(\d+)\.0", str(vstr))
+            return int(match.group(1)) if match else -1
+
+        approved_versions.sort(key=lambda v: parse_version(v["version"]), reverse=True)
+        latest = approved_versions[0]
+
+        logger.info(f"Replacing case ID {case_id} (v{row['version']}) with v{latest['version']}")
+
+        new_row = row.copy()
+        new_row["id"] = latest["id"]
+        new_row["version"] = latest["version"]
+        new_row["test_case_version_id"] = latest["test_case_version_id"]
+        updated_rows.append(new_row)
+
+    if updated_rows:
+        updated_df = test_case_df.copy()
+        updated_pids = []
+
+        for row in updated_rows:
+            match = updated_df[updated_df["pid"] == row["pid"]]
+            if not match.empty:
+                idx = match.index[0]
+                updated_df.loc[idx, ["id", "version", "test_case_version_id"]] = row[["id", "version", "test_case_version_id"]]
+                updated_pids.append(row["pid"])
+
+        updated_cases_df = updated_df[updated_df["pid"].isin(updated_pids)].copy()
+        return updated_df, updated_cases_df
+
+    else:
+        return test_case_df, pd.DataFrame(columns=test_case_df.columns)

@@ -9,3 +9,6 @@ output
 *.~lock
 
 **/archive/
+input/*
+
+auth/*

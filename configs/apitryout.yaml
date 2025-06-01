@@ -2,17 +2,17 @@
 # Schema source: schema\schema.py
 # Generated: 2025-05-29T00:56:17.012416+00:00
 
-suite_name: Auto Uploader - 2025.05.28
+suite_name: Auto Uploader - 2025.06.01
 suite_parent_id: 21735994
 suite_parent_type: test-cycle
 
 excel_path: input\AUTO_result_uploads\upload_template.xlsx
 excel_tab_name: Sheet1
 excel_column_mapping:
-  Test Case PID: test_case_pid
-  Test Run Name: test_run_name
-  NFS PDF Path: pdf_file_path
-  Test Result: raw_test_result
+  tc_id: test_case_pid
+  run_short_desc: test_run_name
+  pdf_file_path: pdf_file_path
+  Final Testing Result: raw_test_result
 
 qtest_domain: https://apitryout.qtestnet.com/
 qtest_project_id: 118513

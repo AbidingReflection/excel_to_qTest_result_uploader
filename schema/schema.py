@@ -7,11 +7,12 @@ def string_in_string(value, *, input_str, key=None):
     if input_str not in value:
         raise ValueError(f"{key} must contain the substring '{input_str}'. Got: '{value}'")
 
-
+auth_systems = ["qTest"]
 project_dirs = ["configs", "auth"]
+
 sub_project_dirs = ["logs", "input", "output"]
 sub_projects = ["AUTO_result_uploads"]
-auth_systems = ["qTest"]
+
 
 schema = {
 
