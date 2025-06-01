@@ -10,7 +10,8 @@ import pandas as pd
 from pathlib import Path
 from pprint import pprint
 from config_env_initializer.config_loader import ConfigLoader
-from modules.qtest_extract import search_qTest_for_test_cases, create_test_suite, create_test_runs, get_case_versions, get_steps_by_case_version, execute_test_runs
+from modules.qtest_extract import search_qTest_for_test_cases, create_test_suite, create_test_runs, get_case_versions, \
+                                  get_steps_by_case_version, execute_test_runs
 
 
 def load_config():

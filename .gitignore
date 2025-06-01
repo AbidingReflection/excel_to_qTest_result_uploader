@@ -7,3 +7,5 @@ scripts/file_tree_output/archive
 generated_config_*
 output
 *.~lock
+
+**/archive/
