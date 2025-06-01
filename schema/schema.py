@@ -1,14 +1,5 @@
 from config_env_initializer.config_validator import CustomValidator
 
-@CustomValidator.register()
-def string_in_string(value, *, input_str, key=None):
-    """Validator to ensure a string contains a required substring."""
-    if not isinstance(value, str):
-        raise ValueError(f"{key} must be a string.")
-    if input_str not in value:
-        raise ValueError(f"{key} must contain the substring '{input_str}'. Got: '{value}'")
-
-
 auth_systems = ["qTest"]
 project_dirs = ["configs", "auth"]
 
@@ -21,19 +12,29 @@ schema = {
     "excel_path": {
         "type": str,
         "required": True,
-        "validators": [],
+        "validators": ["valid_path_string"],
         "default": r"input\<REQUIRED>"
     },
     "excel_tab_name": {
         "type": str,
         "required": True,
-        "validators": [],
-        "default": "sheet1"
+        "validators": ["valid_excel_tab_name"],
+        "default": "Sheet1"
     },
     "excel_column_mapping": {
         "type": dict,
         "required": True,
-        "validators": [],
+        "validators": [
+            {
+                "name": "dict_must_have_values",
+                "required_values": [
+                    "test_case_pid",
+                    "test_run_name",
+                    "pdf_file_path",
+                    "raw_test_result"
+                ]
+            }
+        ],
         "default": None
     },
 
@@ -46,7 +47,7 @@ schema = {
     "suite_parent_id": {
         "type": int,
         "required": True,
-        "validators": [],
+        "validators": [{"name": "int_no_leading_zero"}],
         "default": None
     },
 
@@ -54,27 +55,25 @@ schema = {
     "qtest_domain": {
         "type": str,
         "required": True,
-        "validators": [],
+        "validators": ["https_url_with_trailing_slash"],
         "default": None
     },
     "qtest_project_id": {
         "type": int,
         "required": True,
-        "validators": [],
+        "validators": [{"name": "int_no_leading_zero", "digits": 6}],
         "default": None
     },
     "qtest_auth_path": {
         "type": str,
         "required": False,
-        "validators": [],
+        "validators": ["valid_path_string"],
         "default": r"auth\qTest\example.yaml"
     },
-
-
     "output_dir": {
         "type": str,
         "required": False,
-        "validators": [],  
+        "validators": ["valid_path_string"],
         "default": r"output\AUTO_result_uploads"
     },
 
@@ -84,7 +83,7 @@ schema = {
     "log_dir": {
         "type": str,
         "required": False,
-        "validators": [],
+        "validators": ["valid_path_string"],
         "default": r"logs\AUTO_result_uploads"
     },
     "log_level": {

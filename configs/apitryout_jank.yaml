@@ -1,0 +1,32 @@
+# Auto-generated broken config for validator testing
+# Schema source: schema\schema.py
+# Generated: 2025-06-01T00:56:17Z
+
+suite_name: ""                       # Empty string (should be a meaningful name)
+suite_parent_id: 021735994          # Leading zero on an int (invalid per int_no_leading_zero)
+suite_parent_type: cycle            # Not in schema at all (should be ignored or flagged depending on implementation)
+
+excel_path: "///invalid<>path.xlsx" # Syntactically invalid path (unusual characters)
+excel_tab_name: "Invalid/Name*"     # Invalid characters for Excel tab name
+excel_column_mapping:
+  tc_id: wrong_field                # Missing required value "test_case_pid"
+  run_short_desc: test_run_name
+  Final Testing Result: ""          # Missing required value "raw_test_result"
+                                    # Also value is empty string
+
+qtest_domain: "http://apitryout.qtestnet.com"   # Does not start with "https://" or end with "/"
+qtest_project_id: 012345                        # Leading zero (should fail int_no_leading_zero with digits=6)
+qtest_auth_path: "|invalidpath?.yaml"          # Invalid path string (strange characters)
+
+output_dir: ""                      # Empty path
+log_dir: 123                        # Not a string, but should be path string
+log_level: "INVALID"               # Invalid log level
+log_microseconds: "maybe"          # Should be a boolean
+
+request_timeout: -5                # Below min value (5)
+request_retries: 999               # Above max value (10)
+
+execution_status_mapping:
+  "Passed": "six-o-one"            # Should be int
+  "Failed": 602
+  "Skipped":                       # Missing value

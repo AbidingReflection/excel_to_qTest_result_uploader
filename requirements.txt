@@ -4,7 +4,7 @@ aiosignal==1.3.2
 attrs==25.3.0
 certifi==2025.4.26
 charset-normalizer==3.4.2
-config-env-initializer @ git+ssh://git@github.com/AbidingReflection/config-env-initializer.git@3cc22982ef42f5a022d83b1d753e871b70a3aac2
+config-env-initializer @ git+https://github.com/AbidingReflection/config-env-initializer.git@e22be957a5948908582e4c38110928d0379a1572
 et_xmlfile==2.0.0
 frozenlist==1.6.0
 idna==3.10
