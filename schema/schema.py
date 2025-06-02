@@ -13,7 +13,7 @@ schema = {
         "type": str,
         "required": True,
         "validators": ["valid_path_string"],
-        "default": r"input\<REQUIRED>"
+        "default": r"input/<REQUIRED>"
     },
     "excel_tab_name": {
         "type": str,
@@ -68,13 +68,13 @@ schema = {
         "type": str,
         "required": False,
         "validators": ["valid_path_string"],
-        "default": r"auth\qTest\example.yaml"
+        "default": r"auth/qTest/example.yaml"
     },
     "output_dir": {
         "type": str,
         "required": False,
         "validators": ["valid_path_string"],
-        "default": r"output\AUTO_result_uploads"
+        "default": r"output/AUTO_result_uploads"
     },
 
 

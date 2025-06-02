@@ -6,7 +6,7 @@ suite_name: FINAL TEST - 2025.06.01 - FINAL
 suite_parent_id: 21735994
 suite_parent_type: test-cycle
 
-excel_path: input\AUTO_result_uploads\upload_template.xlsx
+excel_path: input/AUTO_result_uploads/upload_template.xlsx
 excel_tab_name: Sheet1
 excel_column_mapping:
   tc_id: test_case_pid
@@ -16,11 +16,11 @@ excel_column_mapping:
 
 qtest_domain: https://apitryout.qtestnet.com/
 qtest_project_id: 118513
-qtest_auth_path: auth\qTest\apitryout.yaml
+qtest_auth_path: auth/qTest/apitryout.yaml
 
-output_dir: output\AUTO_result_uploads
+output_dir: output/AUTO_result_uploads
 
-log_dir: logs\AUTO_result_uploads
+log_dir: logs/AUTO_result_uploads
 log_level: INFO
 log_microseconds: false
 
